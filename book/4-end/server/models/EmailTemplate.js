@@ -1,7 +1,6 @@
-import mongoose from 'mongoose';
-import Handlebars from 'handlebars';
-
-import logger from '../logs';
+const mongoose = require('mongoose');
+const _ = require('lodash');
+const logger = require('../logs');
 
 const { Schema } = mongoose;
 
@@ -23,47 +22,51 @@ const mongoSchema = new Schema({
 
 const EmailTemplate = mongoose.model('EmailTemplate', mongoSchema);
 
-function insertTemplates() {
+async function getEmailTemplate(name, params) {
+  const source = await EmailTemplate.findOne({ name });
+  if (!source) {
+    throw new Error(`No EmailTemplates found.
+      Please check that at least one is generated at server startup,
+      restart your server and try again.`);
+  }
+
+  return {
+    message: _.template(source.message)(params),
+    subject: _.template(source.subject)(params),
+  };
+}
+
+async function insertTemplates() {
   const templates = [
     {
       name: 'welcome',
       subject: 'Welcome to builderbook.org',
-      message: `{{userName}},
+      message: `<%= userName %>,
         <p>
           Thanks for signing up for Builder Book!
         </p>
         <p>
           In our books, we teach you how to build complete, production-ready web apps from scratch.
         </p>
-        
+
         Kelly & Timur, Team Builder Book
       `,
     },
   ];
 
-  templates.forEach(async (template) => {
-    if ((await EmailTemplate.find({ name: template.name }).count()) > 0) {
-      return;
-    }
-
-    EmailTemplate
-      .create(template)
-      .catch((error) => {
-        logger.error('EmailTemplate insertion error:', error);
-      });
+  const updates = _.reduce(
+    templates,
+    (res, template) => {
+      res.push(EmailTemplate.updateOne({ name: template.name }, template, { upsert: true }));
+      return res;
+    },
+    [],
+  );
+  return Promise.all(updates).catch((error) => {
+    logger.error('EmailTemplate insertion error: ', error);
+    throw error;
   });
 }
 
-insertTemplates();
-
-export default async function getEmailTemplate(name, params) {
-  const source = await EmailTemplate.findOne({ name });
-  if (!source) {
-    throw new Error('not found');
-  }
-
-  return {
-    message: Handlebars.compile(source.message)(params),
-    subject: Handlebars.compile(source.subject)(params),
-  };
-}
+exports.insertTemplates = insertTemplates;
+exports.getEmailTemplate = getEmailTemplate;

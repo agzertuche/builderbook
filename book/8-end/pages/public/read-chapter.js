@@ -2,6 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Error from 'next/error';
 import Head from 'next/head';
+import { withRouter } from 'next/router';
 import throttle from 'lodash/throttle';
 
 import Link from 'next/link';
@@ -10,7 +11,6 @@ import Header from '../../components/Header';
 import BuyButton from '../../components/customer/BuyButton';
 
 import { getChapterDetail } from '../../lib/api/public';
-import withLayout from '../../lib/withLayout';
 import withAuth from '../../lib/withAuth';
 
 const styleIcon = {
@@ -23,34 +23,26 @@ class ReadChapter extends React.Component {
   static propTypes = {
     chapter: PropTypes.shape({
       _id: PropTypes.string.isRequired,
+      isPurchased: PropTypes.bool,
+      isFree: PropTypes.bool.isRequired,
+      htmlContent: PropTypes.string,
+      htmlExcerpt: PropTypes.string,
     }),
     user: PropTypes.shape({
       _id: PropTypes.string.isRequired,
     }),
-    url: PropTypes.shape({
+    router: PropTypes.shape({
       asPath: PropTypes.string.isRequired,
     }).isRequired,
     showStripeModal: PropTypes.bool.isRequired,
+    noHeader: PropTypes.bool,
   };
 
   static defaultProps = {
     chapter: null,
     user: null,
+    noHeader: true,
   };
-
-  static async getInitialProps({ req, query }) {
-    const { bookSlug, chapterSlug } = query;
-
-    const headers = {};
-    if (req && req.headers && req.headers.cookie) {
-      headers.cookie = req.headers.cookie;
-    }
-
-    const chapter = await getChapterDetail({ bookSlug, chapterSlug }, { headers });
-    const showStripeModal = req ? !!req.query.buy : window.location.search.includes('buy=1');
-
-    return { chapter, showStripeModal };
-  }
 
   constructor(props, ...args) {
     super(props, ...args);
@@ -155,6 +147,20 @@ class ReadChapter extends React.Component {
     }
   };
 
+  static async getInitialProps({ req, query }) {
+    const { bookSlug, chapterSlug } = query;
+
+    const headers = {};
+    if (req && req.headers && req.headers.cookie) {
+      headers.cookie = req.headers.cookie;
+    }
+
+    const chapter = await getChapterDetail({ bookSlug, chapterSlug }, { headers });
+    const showStripeModal = req ? !!req.query.buy : window.location.search.includes('buy=1');
+
+    return { chapter, showStripeModal };
+  }
+
   toggleChapterList = () => {
     this.setState({ showTOC: !this.state.showTOC });
   };
@@ -166,9 +172,7 @@ class ReadChapter extends React.Component {
   renderMainContent() {
     const { user, showStripeModal } = this.props;
 
-    const {
-      chapter, htmlContent, showTOC, isMobile,
-    } = this.state;
+    const { chapter, htmlContent, showTOC, isMobile } = this.state;
 
     const { book } = chapter;
 
@@ -197,7 +201,8 @@ class ReadChapter extends React.Component {
   }
 
   renderSections() {
-    const { sections } = this.state.chapter;
+    const { chapter } = this.state;
+    const { sections } = chapter;
     const { activeSection } = this.state;
 
     if (!sections || !sections.length === 0) {
@@ -206,7 +211,7 @@ class ReadChapter extends React.Component {
 
     return (
       <ul>
-        {sections.map(s => (
+        {sections.map((s) => (
           <li key={s.escapedText} style={{ paddingTop: '10px' }}>
             <a
               style={{
@@ -224,9 +229,7 @@ class ReadChapter extends React.Component {
   }
 
   renderSidebar() {
-    const {
-      showTOC, chapter, isMobile, hideHeader,
-    } = this.state;
+    const { showTOC, chapter, isMobile, hideHeader } = this.state;
 
     if (!showTOC) {
       return null;
@@ -279,11 +282,9 @@ class ReadChapter extends React.Component {
   }
 
   render() {
-    const { user, url } = this.props;
+    const { user, router } = this.props;
 
-    const {
-      chapter, showTOC, hideHeader, isMobile,
-    } = this.state;
+    const { chapter, showTOC, hideHeader, isMobile } = this.state;
 
     if (!chapter) {
       return <Error statusCode={404} />;
@@ -307,7 +308,7 @@ class ReadChapter extends React.Component {
           ) : null}
         </Head>
 
-        <Header user={user} hideHeader={hideHeader} redirectUrl={url.asPath} />
+        <Header user={user} hideHeader={hideHeader} redirectUrl={router.asPath} />
 
         {this.renderSidebar()}
 
@@ -345,11 +346,13 @@ class ReadChapter extends React.Component {
             role="button"
           >
             format_list_bulleted
-            </i>
+          </i>
         </div>
       </div>
     );
   }
 }
 
-export default withAuth(withLayout(ReadChapter, { noHeader: true }), { loginRequired: false });
+export default withAuth(withRouter(ReadChapter), {
+  loginRequired: false,
+});

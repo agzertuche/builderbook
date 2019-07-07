@@ -49,7 +49,7 @@ async function insertTemplates() {
         <p>
           If you have any questions while reading the book, 
           please fill out an issue on 
-          <a href="https://github.com/builderbook/builderbook target="blank">Gihub</a>.
+          <a href="https://github.com/builderbook/builderbook target="blank">Github</a>.
         </p>
       
         Kelly & Timur, Team Builder Book
@@ -61,7 +61,7 @@ async function insertTemplates() {
     const t = templates[i];
 
     // eslint-disable-next-line no-await-in-loop
-    const count = await EmailTemplate.find({ name: t.name }).count();
+    const count = await EmailTemplate.find({ name: t.name }).countDocuments();
 
     if (count === 0) {
       EmailTemplate.create(Object.assign({}, t, {
@@ -85,4 +85,5 @@ async function getEmailTemplate(name, params) {
   };
 }
 
-module.exports = getEmailTemplate;
+exports.insertTemplates = insertTemplates;
+exports.getEmailTemplate = getEmailTemplate;

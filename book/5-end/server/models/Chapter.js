@@ -1,6 +1,7 @@
-import mongoose from 'mongoose';
+/* eslint-disable no-use-before-define */
 
-import Book from './Book';
+const mongoose = require('mongoose');
+// const Book = require('./Book');
 
 const { Schema } = mongoose;
 
@@ -78,5 +79,6 @@ mongoSchema.loadClass(ChapterClass);
 
 const Chapter = mongoose.model('Chapter', mongoSchema);
 
-export default Chapter;
+module.exports = Chapter;
 
+const Book = require('./Book');

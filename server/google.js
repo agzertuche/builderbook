@@ -2,7 +2,6 @@ const passport = require('passport');
 const Strategy = require('passport-google-oauth').OAuth2Strategy;
 const User = require('./models/User');
 
-
 function auth({ ROOT_URL, server }) {
   const verify = async (accessToken, refreshToken, profile, verified) => {
     let email;
@@ -30,14 +29,16 @@ function auth({ ROOT_URL, server }) {
         console.log(err); // eslint-disable-line
     }
   };
-  passport.use(new Strategy(
-    {
-      clientID: process.env.Google_clientID,
-      clientSecret: process.env.Google_clientSecret,
-      callbackURL: `${ROOT_URL}/oauth2callback`,
-    },
-    verify,
-  ));
+  passport.use(
+    new Strategy(
+      {
+        clientID: process.env.Google_clientID,
+        clientSecret: process.env.Google_clientSecret,
+        callbackURL: `${ROOT_URL}/oauth2callback`,
+      },
+      verify,
+    ),
+  );
 
   passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -58,10 +59,10 @@ function auth({ ROOT_URL, server }) {
       prompt: 'select_account',
     };
 
-    if (req.query && req.query.next && req.query.next.startsWith('/')) {
-      req.session.next_url = req.query.next;
+    if (req.query && req.query.redirectUrl && req.query.redirectUrl.startsWith('/')) {
+      req.session.finalUrl = req.query.redirectUrl;
     } else {
-      req.session.next_url = null;
+      req.session.finalUrl = null;
     }
 
     passport.authenticate('google', options)(req, res, next);
@@ -75,8 +76,8 @@ function auth({ ROOT_URL, server }) {
     (req, res) => {
       if (req.user && req.user.isAdmin) {
         res.redirect('/admin');
-      } else if (req.session.next_url) {
-        res.redirect(req.session.next_url);
+      } else if (req.session.finalUrl) {
+        res.redirect(req.session.finalUrl);
       } else {
         res.redirect('/my-books');
       }

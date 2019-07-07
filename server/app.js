@@ -14,6 +14,7 @@ const { setupGithub } = require('./github');
 const api = require('./api');
 
 const logger = require('./logs');
+const { insertTemplates } = require('./models/EmailTemplate');
 
 require('dotenv').config();
 
@@ -23,7 +24,13 @@ const ROOT_URL = dev ? `http://localhost:${port}` : 'https://builderbook.org';
 
 const MONGO_URL = dev ? process.env.MONGO_URL_TEST : process.env.MONGO_URL;
 
-mongoose.connect(MONGO_URL);
+const options = {
+  useNewUrlParser: true,
+  useCreateIndex: true,
+  useFindAndModify: false,
+};
+
+mongoose.connect(MONGO_URL, options);
 
 const sessionSecret = process.env.SESSION_SECRET;
 
@@ -35,7 +42,7 @@ const URL_MAP = {
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-app.prepare().then(() => {
+app.prepare().then(async () => {
   const server = express();
 
   server.use(helmet());
@@ -80,6 +87,8 @@ app.prepare().then(() => {
   }
 
   server.use(session(sess));
+
+  await insertTemplates();
 
   auth({ server, ROOT_URL });
   setupGithub({ server });

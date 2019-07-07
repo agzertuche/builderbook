@@ -7,7 +7,6 @@ import Link from 'next/link';
 import Button from '@material-ui/core/Button';
 
 import { getBookDetail, syncOneChapter, syncAllChapters } from '../../lib/api/admin';
-import withLayout from '../../lib/withLayout';
 import withAuth from '../../lib/withAuth';
 import notify from '../../lib/notifier';
 
@@ -60,14 +59,16 @@ const MyBook = ({ book, error }) => {
         Repo on Github
       </a>
       <p />
-      <Button variant="raised" data-bookid={book._id} onClick={handleSyncAllChapters}>
+      <Button variant="contained" data-bookid={book._id} onClick={handleSyncAllChapters}>
         Sync all chapters
       </Button>
       <Link as={`/admin/edit-book/${book.slug}`} href={`/admin/edit-book?slug=${book.slug}`}>
-        <Button variant="raised" style={{ marginLeft: '20px' }}>Edit book</Button>
+        <Button variant="contained" style={{ marginLeft: '20px' }}>
+          Edit book
+        </Button>
       </Link>
       <ul style={{ listStyleType: 'none', padding: '10px 0px' }}>
-        {chapters.map(ch => (
+        {chapters.map((ch) => (
           <li key={ch._id}>
             <Button data-bookid={book._id} data-chapterid={ch._id} onClick={handleSyncOneChapter}>
               Sync
@@ -88,6 +89,12 @@ const MyBook = ({ book, error }) => {
 MyBook.propTypes = {
   book: PropTypes.shape({
     name: PropTypes.string.isRequired,
+    slug: PropTypes.string.isRequired,
+    _id: PropTypes.string.isRequired,
+    githubRepo: PropTypes.string.isRequired,
+    chapters: PropTypes.arrayOf({
+      _id: PropTypes.string.isRequired,
+    }),
   }),
   error: PropTypes.string,
 };
@@ -115,7 +122,8 @@ class MyBookWithData extends React.Component {
   async componentDidMount() {
     NProgress.start();
     try {
-      const book = await getBookDetail({ slug: this.props.slug });
+      const { slug } = this.props;
+      const book = await getBookDetail({ slug });
       this.setState({ book, loading: false }); // eslint-disable-line
       NProgress.done();
     } catch (err) {
@@ -129,4 +137,4 @@ class MyBookWithData extends React.Component {
   }
 }
 
-export default withAuth(withLayout(MyBookWithData));
+export default withAuth(MyBookWithData);

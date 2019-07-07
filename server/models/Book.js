@@ -1,3 +1,5 @@
+/* eslint-disable no-use-before-define */
+
 const mongoose = require('mongoose');
 const frontmatter = require('front-matter');
 const { getCommits, getContent } = require('../github');
@@ -8,7 +10,7 @@ const User = require('./User');
 const Purchase = require('./Purchase');
 
 const sendEmail = require('../aws');
-const getEmailTemplate = require('./EmailTemplate');
+const { getEmailTemplate } = require('./EmailTemplate');
 
 const logger = require('../logs');
 
@@ -63,21 +65,14 @@ class BookClass {
 
     const book = bookDoc.toObject();
 
-    // eslint-disable-next-line no-use-before-define
     book.chapters = (await Chapter.find({ bookId: book._id }, 'title slug').sort({
       order: 1,
-    })).map(ch => ch.toObject());
+    })).map((ch) => ch.toObject());
 
     return book;
   }
 
-  static async add({
-    name,
-    price,
-    textNearButton = '',
-    githubRepo,
-    supportURL = '',
-  }) {
+  static async add({ name, price, textNearButton = '', githubRepo, supportURL = '' }) {
     const slug = await generateSlug(this, name);
 
     return this.create({
@@ -91,14 +86,7 @@ class BookClass {
     });
   }
 
-  static async edit({
-    id,
-    name,
-    price,
-    textNearButton = '',
-    githubRepo,
-    supportURL = '',
-  }) {
+  static async edit({ id, name, price, textNearButton = '', githubRepo, supportURL = '' }) {
     const book = await this.findById(id, 'slug name');
 
     if (!book) {
@@ -117,16 +105,17 @@ class BookClass {
       modifier.slug = await generateSlug(this, name);
     }
 
-    await this.updateOne({ _id: id }, { $set: modifier });
-
-    const editedBook = await this.findById(id, 'slug');
+    const editedBook = await this.findOneAndUpdate(
+      { _id: id },
+      { $set: modifier },
+      { fields: 'slug', new: true },
+    );
 
     return editedBook;
   }
 
   static async syncOneChapter({ id, githubAccessToken, chapterId }) {
     const book = await this.findById(id, 'userId githubRepo').lean();
-    // eslint-disable-next-line no-use-before-define
     const chapter = await Chapter.findById(chapterId, 'githubFilePath').lean();
 
     if (!book) {
@@ -143,7 +132,6 @@ class BookClass {
     data.path = chapter.githubFilePath;
 
     try {
-      // eslint-disable-next-line no-use-before-define
       await Chapter.syncContent({ book, data });
       logger.info('Content is synced', { path: chapter.githubFilePath });
     } catch (error) {
@@ -180,33 +168,34 @@ class BookClass {
       path: '',
     });
 
-    await Promise.all(mainFolder.data.map(async (f) => {
-      if (f.type !== 'file') {
-        return;
-      }
+    await Promise.all(
+      mainFolder.data.map(async (f) => {
+        if (f.type !== 'file') {
+          return;
+        }
 
-      if (f.path !== 'introduction.md' && !/chapter-(\d+)\.md/.test(f.path)) {
-        // not chapter content, skip
-        return;
-      }
+        if (f.path !== 'introduction.md' && !/chapter-(\d+)\.md/.test(f.path)) {
+          // not chapter content, skip
+          return;
+        }
 
-      const chapter = await getContent({
-        accessToken: githubAccessToken,
-        repoName: book.githubRepo,
-        path: f.path,
-      });
+        const chapter = await getContent({
+          accessToken: githubAccessToken,
+          repoName: book.githubRepo,
+          path: f.path,
+        });
 
-      const data = frontmatter(Buffer.from(chapter.data.content, 'base64').toString('utf8'));
-      data.path = f.path;
+        const data = frontmatter(Buffer.from(chapter.data.content, 'base64').toString('utf8'));
+        data.path = f.path;
 
-      try {
-        // eslint-disable-next-line no-use-before-define
-        await Chapter.syncContent({ book, data });
-        logger.info('Content is synced', { path: f.path });
-      } catch (error) {
-        logger.error('Content sync has error', { path: f.path, error });
-      }
-    }));
+        try {
+          await Chapter.syncContent({ book, data });
+          logger.info('Content is synced', { path: f.path });
+        } catch (error) {
+          logger.error('Content sync has error', { path: f.path, error });
+        }
+      }),
+    );
 
     return this.findByIdAndUpdate(book._id, { githubLastCommitSha: lastCommitSha });
   }
@@ -222,7 +211,7 @@ class BookClass {
     }
 
     const isPurchased =
-      (await Purchase.find({ userId: user._id, bookId: book._id }).count()) > 0;
+      (await Purchase.find({ userId: user._id, bookId: book._id }).countDocuments()) > 0;
     if (isPurchased) {
       throw new Error('Already bought this book');
     }
@@ -236,7 +225,7 @@ class BookClass {
 
     User.findByIdAndUpdate(user.id, { $addToSet: { purchasedBookIds: book._id } }).exec();
 
-    const template = await getEmailTemplate('purchased', {
+    const template = await getEmailTemplate('purchase', {
       userName: user.displayName,
       bookTitle: book.name,
       bookUrl: `https://builderbook.org/books/${book.slug}/introduction`,
@@ -301,7 +290,7 @@ class BookClass {
       throw new Error('User ID required');
     }
 
-    const isPurchased = (await Purchase.find({ userId, bookId: id }).count()) > 0;
+    const isPurchased = (await Purchase.find({ userId, bookId: id }).countDocuments()) > 0;
     if (isPurchased) {
       throw new Error('Already bought this book');
     }
@@ -325,4 +314,3 @@ const Book = mongoose.model('Book', mongoSchema);
 module.exports = Book;
 
 const Chapter = require('./Chapter');
-

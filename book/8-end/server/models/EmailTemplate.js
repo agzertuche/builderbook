@@ -1,7 +1,6 @@
-import mongoose from 'mongoose';
-import Handlebars from 'handlebars';
-
-import logger from '../logs';
+const mongoose = require('mongoose');
+const _ = require('lodash');
+const logger = require('../logs');
 
 const { Schema } = mongoose;
 
@@ -28,14 +27,14 @@ function insertTemplates() {
     {
       name: 'welcome',
       subject: 'Welcome to builderbook.org',
-      message: `{{userName}},
+      message: `<%= userName %>,
         <p>
           At Builder Book, we are excited to help you build useful, production-ready web apps from scratch.
         </p>
-        <p> 
-          See list of available books here.   
+        <p>
+          See list of available books here.
         </p>
-        
+
         Kelly & Timur,
         Team BB
       `,
@@ -43,26 +42,26 @@ function insertTemplates() {
     {
       name: 'purchase',
       subject: 'You purchased book at builderbook.org',
-      message: `{{userName}},
+      message: `<%= userName %>,
         <p>
           Thank you for purchasing our book! You will get confirmation email from Stripe shortly.
         </p>
         <p>
-          Start reading your book: <a href="{{bookUrl}}" target="_blank">{{bookTitle}}</a>
+          Start reading your book: <a href="<%= bookUrl %>" target="_blank"><%= bookTitle %></a>
         </p>
         <p>
-          If you have any questions while reading the book, 
-          please fill out an issue on 
+          If you have any questions while reading the book,
+          please fill out an issue on
           <a href="https://github.com/builderbook/builderbook/issues" target="blank">Github</a>.
         </p>
-      
+
         Kelly & Timur, Team Builder Book
       `,
     },
   ];
 
   templates.forEach(async (template) => {
-    if ((await EmailTemplate.find({ name: template.name }).count()) > 0) {
+    if ((await EmailTemplate.find({ name: template.name }).countDocuments()) > 0) {
       return;
     }
 
@@ -74,14 +73,19 @@ function insertTemplates() {
 
 insertTemplates();
 
-export default async function getEmailTemplate(name, params) {
+async function getEmailTemplate(name, params) {
   const source = await EmailTemplate.findOne({ name });
   if (!source) {
-    throw new Error('not found');
+    throw new Error(`No EmailTemplates found.
+      Please check that at least one is generated at server startup,
+      restart your server and try again.`);
   }
 
   return {
-    message: Handlebars.compile(source.message)(params),
-    subject: Handlebars.compile(source.subject)(params),
+    message: _.template(source.message)(params),
+    subject: _.template(source.subject)(params),
   };
 }
+
+exports.insertTemplates = insertTemplates;
+exports.getEmailTemplate = getEmailTemplate;

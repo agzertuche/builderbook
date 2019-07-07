@@ -12,6 +12,7 @@ export default class Bookmark extends React.PureComponent {
     chapter: PropTypes.shape({
       _id: PropTypes.string.isRequired,
       slug: PropTypes.string.isRequired,
+      order: PropTypes.number.isRequired,
     }).isRequired,
     bookmark: PropTypes.shape({
       hash: PropTypes.string.isRequired,
@@ -40,7 +41,7 @@ export default class Bookmark extends React.PureComponent {
   addBookmark = async () => {
     this.setState({ anchorEl: null });
 
-    const { chapter, activeSection } = this.props;
+    const { chapter, activeSection, changeBookmark } = this.props;
 
     if (!activeSection) {
       notify('To bookmark a new section, scroll to that section.');
@@ -50,12 +51,19 @@ export default class Bookmark extends React.PureComponent {
     NProgress.start();
 
     try {
-      await addBookmark(Object.assign({ chapterId: chapter._id, chapterSlug: chapter.slug, chapterOrder: chapter.order }, activeSection));
+      await addBookmark(
+        Object.assign(
+          { chapterId: chapter._id, chapterSlug: chapter.slug, chapterOrder: chapter.order },
+          activeSection,
+        ),
+      );
       NProgress.done();
-      notify(`You successfully bookmarked Chapter ${chapter.order - 1}, Section "${
-        activeSection.text
-      }".`);
-      this.props.changeBookmark(activeSection);
+      notify(
+        `You successfully bookmarked Chapter ${chapter.order - 1}, Section "${
+          activeSection.text
+        }".`,
+      );
+      changeBookmark(activeSection);
     } catch (err) {
       NProgress.done();
       notify(err);
@@ -100,7 +108,9 @@ export default class Bookmark extends React.PureComponent {
           {bookmark ? (
             <a href={`#${bookmark.hash}`}>
               <MenuItem onClick={this.handleClose}>
-                Go to section &quot;{bookmark.text}&quot;
+                Go to section &quot;
+                {bookmark.text}
+                &quot;
               </MenuItem>
             </a>
           ) : null}

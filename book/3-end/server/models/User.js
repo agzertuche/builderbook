@@ -1,9 +1,12 @@
-import mongoose from 'mongoose';
-import _ from 'lodash';
-
-import generateSlug from '../utils/slugify';
+const mongoose = require('mongoose');
+const _ = require('lodash');
+const generateSlug = require('../utils/slugify');
 
 const { Schema } = mongoose;
+
+mongoose.set('useFindAndModify', false);
+mongoose.set('useCreateIndex', true);
+mongoose.set('useNewUrlParser', true);
 
 const mongoSchema = new Schema({
   googleId: {
@@ -53,14 +56,12 @@ class UserClass {
     return ['id', 'displayName', 'email', 'avatarUrl', 'slug', 'isAdmin', 'isGithubConnected'];
   }
 
-  static async signInOrSignUp({
-    googleId, email, googleToken, displayName, avatarUrl,
-  }) {
+  static async signInOrSignUp({ googleId, email, googleToken, displayName, avatarUrl }) {
     const user = await this.findOne({ googleId }).select(UserClass.publicFields().join(' '));
 
     if (user) {
       const modifier = {};
-      
+
       if (googleToken.accessToken) {
         modifier.access_token = googleToken.accessToken;
       }
@@ -79,7 +80,7 @@ class UserClass {
     }
 
     const slug = await generateSlug(this, displayName);
-    const userCount = await this.find().count();
+    const userCount = await this.find().countDocuments();
 
     const newUser = await this.create({
       createdAt: new Date(),
@@ -100,4 +101,4 @@ mongoSchema.loadClass(UserClass);
 
 const User = mongoose.model('User', mongoSchema);
 
-export default User;
+module.exports = User;

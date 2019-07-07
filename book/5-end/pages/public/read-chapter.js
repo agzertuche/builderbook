@@ -5,7 +5,6 @@ import Head from 'next/head';
 import Grid from '@material-ui/core/Grid';
 
 import { getChapterDetail } from '../../lib/api/public';
-import withLayout from '../../lib/withLayout';
 import withAuth from '../../lib/withAuth';
 
 const styleGrid = {
@@ -16,25 +15,13 @@ class ReadChapter extends React.Component {
   static propTypes = {
     chapter: PropTypes.shape({
       _id: PropTypes.string.isRequired,
+      htmlContent: PropTypes.string,
     }),
   };
 
   static defaultProps = {
     chapter: null,
   };
-
-  static async getInitialProps({ req, query }) {
-    const { bookSlug, chapterSlug } = query;
-
-    const headers = {};
-    if (req && req.headers && req.headers.cookie) {
-      headers.cookie = req.headers.cookie;
-    }
-
-    const chapter = await getChapterDetail({ bookSlug, chapterSlug }, { headers });
-
-    return { chapter };
-  }
 
   constructor(props) {
     super(props);
@@ -61,14 +48,33 @@ class ReadChapter extends React.Component {
     }
   }
 
+  static async getInitialProps({ req, query }) {
+    const { bookSlug, chapterSlug } = query;
+
+    const headers = {};
+    if (req && req.headers && req.headers.cookie) {
+      headers.cookie = req.headers.cookie;
+    }
+
+    const chapter = await getChapterDetail({ bookSlug, chapterSlug }, { headers });
+
+    return { chapter };
+  }
+
   renderMainContent() {
     const { chapter, htmlContent } = this.state;
 
     return (
       <div>
-        <h3>Chapter: {chapter.title}</h3>
-
-        <div className="main-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+        <h3>
+          Chapter:&nbsp;
+          {chapter.title}
+        </h3>
+        <div
+          className="main-content"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: htmlContent }}
+        />
       </div>
     );
   }
@@ -105,7 +111,10 @@ class ReadChapter extends React.Component {
               paddingLeft: '25px',
             }}
           >
-            <h2>Book: {book.name}</h2>
+            <h2>
+              Book:&nbsp;
+              {book.name}
+            </h2>
 
             {this.renderMainContent()}
           </Grid>
@@ -115,4 +124,4 @@ class ReadChapter extends React.Component {
   }
 }
 
-export default withAuth(withLayout(ReadChapter), { loginRequired: false });
+export default withAuth(ReadChapter, { loginRequired: false });

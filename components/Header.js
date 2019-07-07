@@ -63,7 +63,7 @@ function Header({ user, hideHeader, next }) {
             {user && user.isAdmin && !user.isGithubConnected ? (
               <Hidden smDown>
                 <a href="/auth/github">
-                  <Button variant="raised" color="primary" style={styleRaisedButton}>
+                  <Button variant="contained" color="primary" style={styleRaisedButton}>
                     Connect Github
                   </Button>
                 </a>
@@ -72,7 +72,7 @@ function Header({ user, hideHeader, next }) {
           </Grid>
           <Grid item sm={4} xs={9} style={{ textAlign: 'right' }}>
             {user ? (
-              <div style={{ whiteSpace: ' nowrap' }}>
+              <div style={{ whiteSpace: 'nowrap' }}>
                 {!user.isAdmin ? (
                   <MenuDrop
                     options={optionsMenuCustomer}
@@ -98,7 +98,14 @@ function Header({ user, hideHeader, next }) {
                 </Link>
                 <Link
                   prefetch
-                  href={{ pathname: '/public/login', asPath: '/login', query: { next } }}
+                  href={{
+                    pathname: '/public/login',
+                    query: { next },
+                  }}
+                  as={{
+                    pathname: '/login',
+                    query: { next },
+                  }}
                 >
                   <a style={{ margin: '0px 20px 0px auto' }}>Log in</a>
                 </Link>
@@ -115,6 +122,9 @@ Header.propTypes = {
   user: PropTypes.shape({
     displayName: PropTypes.string,
     email: PropTypes.string.isRequired,
+    isAdmin: PropTypes.bool,
+    avatarUrl: PropTypes.string,
+    isGithubConnected: PropTypes.bool,
   }),
   hideHeader: PropTypes.bool,
   next: PropTypes.string,

@@ -1,25 +1,32 @@
-import express from 'express';
-import session from 'express-session';
-import compression from 'compression';
-import mongoSessionStore from 'connect-mongo';
-import next from 'next';
-import mongoose from 'mongoose';
-import helmet from 'helmet';
-import getRootUrl from '../lib/api/getRootUrl';
-import sitemapAndRobots from './sitemapAndRobots';
-import auth from './google';
-import { setupGithub as github } from './github';
-import api from './api';
+const express = require('express');
+const session = require('express-session');
+const mongoSessionStore = require('connect-mongo');
+const next = require('next');
+const mongoose = require('mongoose');
+const compression = require('compression');
+const helmet = require('helmet');
 
-import logger from './logs';
-import routesWithSlug from './routesWithSlug';
+const auth = require('./google');
+const { setupGithub } = require('./github');
+const api = require('./api');
+
+const logger = require('./logs');
+const { insertTemplates } = require('./models/EmailTemplate');
+const routesWithSlug = require('./routesWithSlug');
+const getRootUrl = require('../lib/api/getRootUrl');
+const sitemapAndRobots = require('./sitemapAndRobots');
 
 require('dotenv').config();
 
 const dev = process.env.NODE_ENV !== 'production';
-const MONGO_URL = process.env.MONGO_URL_TEST;
+const MONGO_URL = dev ? process.env.MONGO_URL_TEST : process.env.MONGO_URL;
 
-mongoose.connect(MONGO_URL);
+const options = {
+  useNewUrlParser: true,
+  useCreateIndex: true,
+  useFindAndModify: false,
+};
+mongoose.connect(MONGO_URL, options);
 
 const port = process.env.PORT || 8000;
 const ROOT_URL = getRootUrl();
@@ -32,7 +39,7 @@ const URL_MAP = {
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-app.prepare().then(() => {
+app.prepare().then(async () => {
   const server = express();
 
   server.use(helmet());
@@ -62,8 +69,10 @@ app.prepare().then(() => {
 
   server.use(session(sess));
 
+  await insertTemplates();
+
   auth({ server, ROOT_URL });
-  github({ server });
+  setupGithub({ server });
   api(server);
   routesWithSlug({ server, app });
   sitemapAndRobots({ server });
